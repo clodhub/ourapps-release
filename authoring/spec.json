@@ -1,6 +1,6 @@
 {
   "name": "ourapps-release",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "title": "Ourapps release",
   "description": "Builds, signs and publishes each enabled client target to ourapps.app: GitHub Actions workflow templates, build scripts and tested Python scripts for target switches, manifest generation, package verification and release publishing.",
   "facilities": [
@@ -142,5 +142,165 @@
     "updates": "Patch updates replace the owned files; render the pipeline again after each update and review the diff, because the workflows are generated files. No application data is held; the manifest of the previous release is read from GitHub at publish time. Removal deletes the owned sources; the rendered workflows and scripts in the application repository remain until the owner deletes them."
   },
   "agentInstructions": "Select `ourapps-ae/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.",
-  "developerInstructions": "Create the repository secrets named by the references (`<NAME>_APP_ID` and `<NAME>_BUILD_TOKEN` from the store, only when `storeCredentials` is set; for Android a keystore as base64 plus its password, alias and key password; for Cloudflare web hosting an API token and account id, on an account separate from the store's). Provide `CHANGELOG.md` with a section for each released version, the icon and screenshots, and the Apple and desktop build scripts named in `result.notes`. Run the render step, commit the generated files, then push a `v*` tag. To check, run the commands below."
+  "developerInstructions": "Create the repository secrets named by the references (`<NAME>_APP_ID` and `<NAME>_BUILD_TOKEN` from the store, only when `storeCredentials` is set; for Android a keystore as base64 plus its password, alias and key password; for Cloudflare web hosting an API token and account id, on an account separate from the store's). Provide `CHANGELOG.md` with a section for each released version, the icon and screenshots, and the Apple and desktop build scripts named in `result.notes`. Run the render step, commit the generated files, then push a `v*` tag. To check, run the commands below.",
+  "classes": [
+    {
+      "reference": {
+        "name": "ourapps-ae/ourapps-release-class",
+        "version": "1.0.0",
+        "digest": "c5bc452af536763f3c5d168981dfeedb886b1d06380fd286eaa6039c58d8e0f0"
+      },
+      "descriptor": {
+        "format": 1,
+        "name": "ourapps-ae/ourapps-release-class",
+        "version": "1.0.0",
+        "provides": [
+          {
+            "type": "ae/release-pipeline",
+            "version": "1.0.0",
+            "path": "classes/ourapps-release-class/release-pipeline.json",
+            "modules": {
+              "server": [
+                "server/index.ts"
+              ]
+            }
+          }
+        ],
+        "requires": [],
+        "settings": {
+          "type": "object",
+          "properties": {
+            "androidSigning": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "applicationId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "applicationName": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9 -]{0,63}$"
+            },
+            "bundleIdentifier": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$"
+            },
+            "hostingAccount": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "manifestUrl": {
+              "type": "string",
+              "pattern": "^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9_/-]*)?$"
+            },
+            "repository": {
+              "type": "string",
+              "pattern": "^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9_/-]*)?$"
+            },
+            "storeCredentials": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "targets": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9 -]{0,63}$"
+            },
+            "webDeploy": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          "required": [
+            "applicationId",
+            "applicationName",
+            "bundleIdentifier",
+            "targets"
+          ],
+          "additionalProperties": false
+        },
+        "inventory": [
+          {
+            "path": "classes/ourapps-release-class/check.mjs",
+            "digest": "96f5e171351e16d41c4597a38150f9cb76e3a5628fda0bd0c780768013b9930e"
+          },
+          {
+            "path": "classes/ourapps-release-class/release-pipeline.json",
+            "digest": "c1aefaecf1b213261d9c8a7726c6133dd35d515d2481d6615aab907cfc361763"
+          },
+          {
+            "path": "classes/ourapps-release-class/runtime.mjs",
+            "digest": "7440f3891614c423f74668cb5a2445fea58bbfa4d7c740c8e8a855d1d9300d43"
+          }
+        ],
+        "verification": [
+          {
+            "id": "shared",
+            "root": "package",
+            "argv": [
+              "node",
+              "classes/ourapps-release-class/check.mjs"
+            ],
+            "cwd": ".",
+            "prepare": [],
+            "tools": {
+              "node": "26.5"
+            },
+            "fixtures": [
+              "classes/ourapps-release-class/check.mjs"
+            ],
+            "locks": [],
+            "network": false,
+            "timeoutSeconds": 60,
+            "expectedExit": 0,
+            "scope": "required-local",
+            "requirements": []
+          }
+        ]
+      }
+    }
+  ],
+  "implements": [
+    {
+      "name": "ourapps-ae/ourapps-release-class",
+      "version": "1.0.0",
+      "digest": "c5bc452af536763f3c5d168981dfeedb886b1d06380fd286eaa6039c58d8e0f0"
+    }
+  ],
+  "upstream": [],
+  "compatibility": {
+    "runtimes": {
+      "node": ">=26.5.0 <27.0.0"
+    },
+    "frameworks": {},
+    "dependencies": [],
+    "styles": {
+      "scope": "none",
+      "namespaces": [],
+      "conflicts": []
+    }
+  },
+  "maintenance": {
+    "owners": [
+      "Level N Ltd"
+    ],
+    "contact": "https://github.com/ourapps-ae/ourapps-release/issues",
+    "repository": "https://github.com/ourapps-ae/ourapps-release",
+    "updates": {
+      "source": "https://github.com/ourapps-ae/ourapps-release/releases",
+      "strategy": "manual"
+    }
+  },
+  "supportedPlatforms": [
+    "server"
+  ],
+  "licence": "Apache-2.0",
+  "licenceFile": "LICENCE",
+  "noticeFile": "NOTICE",
+  "templates": [
+    "implementation/server/release.json"
+  ],
+  "modules": {
+    "server": "server/index.ts"
+  }
 }
