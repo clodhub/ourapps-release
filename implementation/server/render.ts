@@ -65,6 +65,16 @@ export interface ReleaseOptions {
   iosDevices?: string[];
   macosMinimum?: string;
   tvosMinimum?: string;
+  // The Xcode major version apple-builds.yml selects (default 27), the generated project (default <appleScheme>.xcodeproj),
+  // the iPhone, iPad and Mac scheme (default: the product name without spaces or dashes) and the Apple TV scheme (default <appleScheme>TV).
+  xcodeVersion?: string;
+  appleProject?: string;
+  appleScheme?: string;
+  appleTvScheme?: string;
+  // With a server folder: ci-android.yml starts the debug build in an emulator against the server started on the runner and
+  // drives it with scripts/android_screen.py until every `until` text is on screen, tapping `tap` texts and filling `enter`
+  // fields (field text to typed text, then tapping `then` texts) on the way.
+  androidCheck?: { tap?: string[]; enter?: Record<string, string>; then?: string[]; until: string[] };
 }
 
 export class SettingsError extends Error {}
@@ -80,6 +90,8 @@ const SECRET_REFERENCE = /^[A-Za-z][A-Za-z0-9_./-]{0,127}$/;
 const PATH = /^[A-Za-z0-9_][A-Za-z0-9_./*-]*$/;
 const VERSION = /^[0-9]{1,3}(\.[0-9]{1,3}){0,2}$/;
 const RUNNER = /^[a-z][a-z0-9.-]{0,31}$/;
+const SCREEN_TEXT = /^[A-Za-z0-9][A-Za-z0-9 ,.'!?-]{0,63}$/;
+const SCHEME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 
 export interface ResolvedRelease {
   targets: Target[];
@@ -190,7 +202,7 @@ function flagOf(name: string, flags: ReadonlySet<string>): boolean {
   if (!KNOWN_FLAGS.has(name)) throw new SettingsError(`template names unknown flag ${name}`);
   return flags.has(name);
 }
-const KNOWN_FLAGS = new Set<string>([...TARGETS, "apple", "cloudflare", "server", "store", "nostore"]);
+const KNOWN_FLAGS = new Set<string>([...TARGETS, "apple", "cloudflare", "server", "store", "nostore", "androidcheck"]);
 
 function template(path: string): string {
   return readFileSync(new URL(`./templates/${path}.template`, import.meta.url), "utf8");
@@ -210,7 +222,23 @@ export interface RenderResult {
   notes: string[];
 }
 
+// The maintenance workflows, outside the release pipeline's files: apple-builds.yml (unsigned Apple builds per Apple target)
+// and aepm-update.yml (weekly update proposals, applied on merge with the owner key).
+const MAINTENANCE = [".github/workflows/apple-builds.yml", ".github/workflows/aepm-update.yml"];
+
 export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions = {}): RenderResult {
+  const result = render(settings, options);
+  for (const file of MAINTENANCE) delete result.files[file];
+  return { ...result, notes: result.notes.filter((note) => !note.startsWith("aepm-update.yml")) };
+}
+
+export function renderMaintenance(settings: ReleaseSettings, options: ReleaseOptions = {}): RenderResult {
+  const result = render(settings, options);
+  const files = Object.fromEntries(MAINTENANCE.filter((file) => file in result.files).map((file) => [file, result.files[file]]));
+  return { files, executable: [], notes: result.notes.filter((note) => note.startsWith("aepm-update.yml")) };
+}
+
+function render(settings: ReleaseSettings, options: ReleaseOptions): RenderResult {
   const resolved = validateSettings(settings);
   const has = (target: Target) => resolved.targets.includes(target);
   const apple = has("macos") || has("tvos");
@@ -227,7 +255,7 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
     ipad: path("ipadScreenshots", options.ipadScreenshots ?? "screenshots/ipad"),
     changelog: path("changelog", options.changelog ?? "CHANGELOG.md"),
   };
-  const node = options.nodeVersion ?? "22";
+  const node = options.nodeVersion ?? "26.5";
   const java = options.javaVersion ?? "17";
   const wrangler = options.wranglerMajor ?? "4";
   for (const [name, value] of [["nodeVersion", node], ["javaVersion", java], ["wranglerMajor", wrangler]] as const) if (!VERSION.test(value)) throw new SettingsError(`${name} must be a version number`);
@@ -241,6 +269,15 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
   if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(prefix)) throw new SettingsError("signingPrefix must be capitals, digits and underscores");
   for (const [name, value] of [["macosMinimum", options.macosMinimum ?? "14.0"], ["tvosMinimum", options.tvosMinimum ?? "17.0"]] as const) if (!VERSION.test(value)) throw new SettingsError(`${name} must be a version number`);
 
+  const xcode = options.xcodeVersion ?? "27";
+  if (!VERSION.test(xcode)) throw new SettingsError("xcodeVersion must be a version number");
+  const appleScheme = options.appleScheme ?? productName.replace(/[ -]/g, "");
+  const appleTvScheme = options.appleTvScheme ?? appleScheme + "TV";
+  for (const [name, value] of [["appleScheme", appleScheme], ["appleTvScheme", appleTvScheme]] as const) if (!SCHEME.test(value)) throw new SettingsError(`${name} must be a scheme name`);
+  const appleProject = path("appleProject", options.appleProject ?? `${appleScheme}.xcodeproj`);
+  const androidCheck = options.androidCheck === undefined ? "" : screenArguments(options.androidCheck);
+  if (androidCheck && server === null) throw new SettingsError("androidCheck needs serverDirectory: the emulator check runs against the server");
+
   const stored = resolved.storeCredentials !== null;
   const store = stored ? secretName(resolved.storeCredentials!) : "";
   const android = resolved.androidSigning ? secretName(resolved.androidSigning) : "";
@@ -248,7 +285,9 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
   // iPhone builds are signed and uploaded through the store, so without store credentials the release has no iOS job.
   const piped = resolved.targets.filter((target) => stored || target !== "ios");
   const built = (["android", "web", "ios"] as const).filter((target) => piped.includes(target));
-  const flags = new Set<string>([...piped, ...(apple ? ["apple"] : []), ...(cloudflare ? ["cloudflare"] : []), ...(server ? ["server"] : []), stored ? "store" : "nostore"]);
+  const flags = new Set<string>([...piped, ...(apple ? ["apple"] : []), ...(cloudflare ? ["cloudflare"] : []), ...(server ? ["server"] : []), stored ? "store" : "nostore",
+    ...(androidCheck ? ["androidcheck"] : [])]);
+  const appleFlags = new Set<string>(resolved.targets.filter((target) => target === "ios" || target === "macos" || target === "tvos"));
   const desktopPlatforms = (["macos", "tvos", "windows"] as const).filter(has);
   const values: Record<string, string> = {
     targets: resolved.targets.join(" "), pipelineTargets: piped.join(" "), applicationId: resolved.applicationId, storeApi: resolved.storeAddress, scripts: o.scripts,
@@ -259,7 +298,7 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
     cfToken: `${cloudflare}_API_TOKEN`, cfAccount: `${cloudflare}_ACCOUNT_ID`,
     signingPrefix: prefix, bundleId: resolved.bundleIdentifier ?? "", productName,
     webDir: o.web, androidDir: o.android, desktopDir: o.desktop, appleDir: o.apple, appleHelpers: o.appleHelpers, serverDir: server ?? "", fixturesDir: o.fixtures,
-    node, java, wrangler, macRunner, windowsRunner, icon: o.icon, screenshots: o.screenshots, ipadScreenshots: o.ipad, changelog: o.changelog,
+    node, java, wrangler, macRunner, windowsRunner, xcode, appleProject, appleScheme, appleTvScheme, androidCheckArgs: androidCheck, icon: o.icon, screenshots: o.screenshots, ipadScreenshots: o.ipad, changelog: o.changelog,
     needs: ["version", ...built, ...(built.includes("ios") ? ["testflight"] : [])].join(", "),
     anyOn: built.map((target) => `needs.version.outputs.${target} == 'true'`).join(" || ") || "false",
     webUrlExpression: has("web") ? "${{ needs.web.outputs.url }}" : "",
@@ -271,7 +310,7 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
   const files: Record<string, string> = {};
   const executable: string[] = [];
   const notes: string[] = [];
-  const render = (name: string, output: string) => { files[output] = expand(template(name), flags, values); };
+  const write = (name: string, output: string, set: ReadonlySet<string> = flags) => { files[output] = expand(template(name), set, values); };
 
   const description = options.description ?? resolved.applicationName;
   if (typeof description !== "string" || !description.trim() || description.length > 300) throw new SettingsError("description must be 1 to 300 characters");
@@ -284,29 +323,47 @@ export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions
     tvos: { minOsVersion: options.tvosMinimum ?? "17.0" }, extra,
   }, null, 2) + "\n";
 
-  if (built.length) render("workflows/release.yml", ".github/workflows/release.yml");
+  if (built.length) write("workflows/release.yml", ".github/workflows/release.yml");
   else notes.push("release.yml is not rendered: none of android, web or (with store credentials) ios is a target, and the other targets publish only through verified packages.");
-  if (has("web")) render("workflows/ci-web.yml", ".github/workflows/ci-web.yml");
-  if (has("android")) render("workflows/ci-android.yml", ".github/workflows/ci-android.yml");
-  if (server) render("workflows/ci-server.yml", ".github/workflows/ci-server.yml");
-  if (desktopPlatforms.length) render("workflows/platform-packages.yml", ".github/workflows/platform-packages.yml");
+  if (has("web")) write("workflows/ci-web.yml", ".github/workflows/ci-web.yml");
+  if (has("android")) write("workflows/ci-android.yml", ".github/workflows/ci-android.yml");
+  if (server) write("workflows/ci-server.yml", ".github/workflows/ci-server.yml");
+  if (desktopPlatforms.length) write("workflows/platform-packages.yml", ".github/workflows/platform-packages.yml");
+  if (appleFlags.size) write("workflows/apple-builds.yml", ".github/workflows/apple-builds.yml", appleFlags);
+  write("workflows/aepm-update.yml", ".github/workflows/aepm-update.yml");
+  notes.push(`aepm-update.yml applies a merged update with the owner's private key from the AEPM_OWNER_KEY repository secret, and opens pull requests only when the repository lets GitHub Actions create them.`);
   if (apple && !stored) notes.push("apple-testflight.yml and build-apple-testflight.sh are not rendered: the TestFlight export reserves builds, signs and uploads through the store, which has no credentials here. platform-packages.yml still builds unsigned Mac and Apple TV evidence.");
   if (has("ios") && !stored) notes.push("No iOS job is rendered: the iPhone build is signed and uploaded to TestFlight through the store, which has no credentials here.");
   if (apple && stored) {
-    render("workflows/apple-testflight.yml", ".github/workflows/apple-testflight.yml");
-    render("scripts/build-apple-testflight.sh", "scripts/build-apple-testflight.sh");
+    write("workflows/apple-testflight.yml", ".github/workflows/apple-testflight.yml");
+    write("scripts/build-apple-testflight.sh", "scripts/build-apple-testflight.sh");
     executable.push("scripts/build-apple-testflight.sh");
     notes.push(`The Apple TestFlight workflow and script call ${o.appleHelpers}/apple-testflight.py, apple-testflight-upload.py and reserve-apple-build.py and ${o.apple}/build-platform.sh, which this package does not ship.`);
   }
   if (has("windows")) {
-    render("scripts/build-windows.sh", "scripts/build-windows.sh");
-    render("scripts/inspect-windows.ps1", "scripts/inspect-windows.ps1");
+    write("scripts/build-windows.sh", "scripts/build-windows.sh");
+    write("scripts/inspect-windows.ps1", "scripts/inspect-windows.ps1");
     executable.push("scripts/build-windows.sh");
     notes.push(`The Windows script runs the npm scripts check, package:win and smoke in ${o.web} and ${o.desktop} (the windows-desktop component provides the desktop ones).`);
   }
   if (has("ios")) notes.push(`The iOS job calls ${o.apple}/build-ipa.sh <version> <build> <profile> <output>, which this package does not ship; it must write app.ipa in the output folder.`);
   if (has("android")) notes.push(`The Android job needs ${o.android} to be a Gradle project whose release build reads ${prefix}_KEYSTORE, ${prefix}_KEYSTORE_PASSWORD, ${prefix}_KEY_ALIAS and ${prefix}_KEY_PASSWORD (android-host does).`);
   return { files, executable, notes };
+}
+
+// android_screen.py arguments, each text in double quotes.
+function screenArguments(check: NonNullable<ReleaseOptions["androidCheck"]>): string {
+  const quoted = (name: string, value: string) => {
+    if (typeof value !== "string" || !SCREEN_TEXT.test(value)) throw new SettingsError(`androidCheck ${name} texts are letters, digits, spaces and , . ' ! ? -`);
+    return `--${name} "${value}"`;
+  };
+  if (!Array.isArray(check.until) || !check.until.length) throw new SettingsError("androidCheck.until must name the text to wait for");
+  return [
+    ...(check.tap ?? []).map((label) => quoted("tap", label)),
+    ...Object.entries(check.enter ?? {}).map(([field, text]) => { quoted("enter", field); quoted("enter", text); return `--enter "${field}=${text}"`; }),
+    ...(check.then ?? []).map((label) => quoted("then", label)),
+    ...check.until.map((label) => quoted("until", label)),
+  ].join(" ");
 }
 
 export function writeRelease(directory: string, result: RenderResult): void {

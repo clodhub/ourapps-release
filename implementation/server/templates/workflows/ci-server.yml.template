@@ -11,6 +11,7 @@ on:
     paths:
       - "@@serverDir@@/**"
       - ".github/workflows/ci-server.yml"
+  workflow_dispatch:
 
 # A newer push replaces a check still running.
 concurrency:

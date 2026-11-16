@@ -1,0 +1,48 @@
+# Unsigned builds of the Apple clients on a macOS runner, on a version tag or when started by hand: the generated Xcode
+# project for the iOS Simulator, Mac Catalyst and the tvOS Simulator, by target.
+name: apple-builds
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apple:
+    runs-on: @@macRunner@@
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: @@appleDir@@
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "@@xcode@@"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "@@node@@"
+      - run: brew install xcodegen
+      - name: Generate the project
+        run: |
+          node generate-project.ts
+          xcodegen generate
+@@if ios@@
+      - name: iPhone and iPad
+        run: xcodebuild -project "@@appleProject@@" -scheme "@@appleScheme@@" -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+@@end@@
+@@if macos@@
+      - name: Mac (Mac Catalyst)
+        run: xcodebuild -project "@@appleProject@@" -scheme "@@appleScheme@@" -destination 'generic/platform=macOS,variant=Mac Catalyst' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+@@end@@
+@@if tvos@@
+      - name: Apple TV
+        run: xcodebuild -project "@@appleProject@@" -scheme "@@appleTvScheme@@" -destination 'generic/platform=tvOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+@@end@@

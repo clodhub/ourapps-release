@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expand, parseTargets, renderRelease, secretName, SettingsError, validateSettings, type ReleaseSettings } from "../implementation/server/render.ts";
+import { expand, parseTargets, renderMaintenance, renderRelease, secretName, SettingsError, validateSettings, writeRelease, type ReleaseSettings } from "../implementation/server/render.ts";
 import { buildPipeline } from "../examples/consumer.ts";
 
 const fixture = JSON.parse(readFileSync(new URL("fixtures/settings.json", import.meta.url), "utf8"));
@@ -299,6 +299,82 @@ test("the rendered application description builds a valid manifest with the ship
   const manifest = JSON.parse(readFileSync(out, "utf8"));
   assert.equal(manifest.minPlayers, 2);
   assert.equal(manifest.install.ios.bundleId, "app.example.demo");
+});
+
+// ---- checks, Apple builds and updates ----
+
+const maintenance = renderMaintenance(all, { serverDirectory: "server" });
+const maintained = (path: string) => maintenance.files[path];
+
+test("every check workflow can be started by hand", () => {
+  for (const name of ["ci-web", "ci-android", "ci-server"]) assert.match(text(`.github/workflows/${name}.yml`), /^  workflow_dispatch:/m, name);
+  for (const name of ["apple-builds", "aepm-update"]) assert.match(maintained(`.github/workflows/${name}.yml`), /^  workflow_dispatch:/m, name);
+});
+
+test("the maintenance workflows are rendered apart from the release pipeline's files", () => {
+  assert.deepEqual(Object.keys(maintenance.files).sort(), [".github/workflows/aepm-update.yml", ".github/workflows/apple-builds.yml"]);
+  assert.deepEqual(Object.keys(renderMaintenance(webOnly).files), [".github/workflows/aepm-update.yml"]);
+  assert.ok(!Object.keys(rendered.files).some((file) => file.endsWith("apple-builds.yml") || file.endsWith("aepm-update.yml")));
+  assert.ok(!rendered.notes.some((note) => note.includes("AEPM_OWNER_KEY")));
+});
+
+test("with a server folder ci-web plays the application's browser check against the server started on the runner", () => {
+  const web = text(".github/workflows/ci-web.yml");
+  assert.match(web, /npm start > "\$RUNNER_TEMP\/server\.log"/);
+  assert.match(web, /VITE_SERVER=http:\/\/127\.0\.0\.1:8788 npx vite build/);
+  assert.match(web, /if: hashFiles\('web\/test\/browser\.mjs'\) != ''/);
+  assert.match(web, /node test\/browser\.mjs/);
+  assert.doesNotMatch(renderRelease(webOnly).files[".github/workflows/ci-web.yml"], /node test\/browser\.mjs|npm start/);
+});
+
+test("androidCheck drives the debug build in an emulator with the shipped screen script; texts are quoted plain words", () => {
+  assert.doesNotMatch(text(".github/workflows/ci-android.yml"), /emulator-runner/);
+  const checked = renderRelease(all, { serverDirectory: "server", androidCheck: { tap: ["No, I know how to play"], enter: { "Your name": "Runner" }, then: ["Save"], until: ["Sit down", "Casino"] } });
+  const android = checked.files[".github/workflows/ci-android.yml"];
+  assert.match(android, /reactivecircus\/android-emulator-runner@v2/);
+  assert.match(android, /-PserverUrl=http:\/\/10\.0\.2\.2:8788/);
+  assert.match(android, /android_screen\.py" app\/build\/outputs\/apk\/debug\/app-debug\.apk --tap "No, I know how to play" --enter "Your name=Runner" --then "Save" --until "Sit down" --until "Casino"/);
+  assert.throws(() => renderRelease(all, { androidCheck: { until: ["Rooms"] } }), /serverDirectory/);
+  for (const bad of ['a"b', "a: b", "$(x)", ""]) assert.throws(() => renderRelease(all, { serverDirectory: "server", androidCheck: { until: [bad] } }), SettingsError, bad);
+  assert.throws(() => renderRelease(all, { serverDirectory: "server", androidCheck: { until: [] } }), /until/);
+});
+
+test("apple-builds builds unsigned for each Apple target only, on a tag or by hand", () => {
+  const apple = maintained(".github/workflows/apple-builds.yml");
+  assert.match(apple, /tags: \["v\*"\]/);
+  assert.match(apple, /xcode-version: "27"/);
+  assert.match(apple, /-scheme "DemoApp" -destination 'generic\/platform=iOS Simulator'/);
+  assert.match(apple, /variant=Mac Catalyst/);
+  assert.match(apple, /-scheme "DemoAppTV" -destination 'generic\/platform=tvOS Simulator'/);
+  assert.match(apple, /CODE_SIGNING_ALLOWED=NO/);
+  const tv = renderMaintenance({ ...webOnly, targets: "tvos", bundleIdentifier: "app.example.demo" }, { appleScheme: "Show", xcodeVersion: "26" }).files[".github/workflows/apple-builds.yml"];
+  assert.match(tv, /-project "Show\.xcodeproj" -scheme "ShowTV"/);
+  assert.doesNotMatch(tv, /platform=iOS Simulator|variant=Mac Catalyst/);
+  assert.throws(() => renderMaintenance(all, { appleScheme: "a b" }), /scheme/);
+});
+
+test("aepm-update proposes weekly and applies a merged proposal with the owner key secret", () => {
+  const update = maintained(".github/workflows/aepm-update.yml");
+  assert.match(update, /cron: "17 5 \* \* 1"/);
+  assert.match(update, /aepm_update\.py propose/);
+  assert.match(update, /gh pr create/);
+  assert.match(update, /paths: \["\.aepm\/update\/definition\.json"\]/);
+  assert.match(update, /AEPM_OWNER_KEY: \$\{\{ secrets\.AEPM_OWNER_KEY \}\}/);
+  assert.match(update, /aepm_update\.py apply/);
+  assert.match(update, /AEPM_FROM: "https:\/\/ourapps\.app"/);
+  assert.ok(maintenance.notes.some((note) => note.includes("AEPM_OWNER_KEY")));
+});
+
+test("rendered workflows pass actionlint when it is installed", () => {
+  const found = spawnSync("actionlint", ["-version"], { encoding: "utf8" });
+  if (found.error) return;
+  const directory = mkdtempSync(join(tmpdir(), "release-"));
+  const options = { serverDirectory: "server", androidCheck: { tap: ["Skip"], until: ["Rooms"] } };
+  buildPipeline(directory, all, options);
+  writeRelease(directory, renderMaintenance(all, options));
+  const workflows = join(directory, ".github/workflows");
+  const lint = spawnSync("actionlint", ["-shellcheck=", "-pyflakes=", ...readdirSync(workflows).map((name) => join(workflows, name))], { encoding: "utf8" });
+  assert.equal(lint.status, 0, lint.stdout + lint.stderr);
 });
 
 // ---- the Python parts ----
