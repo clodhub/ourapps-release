@@ -324,6 +324,7 @@ test("with a server folder ci-web plays the application's browser check against 
   assert.match(web, /VITE_SERVER=http:\/\/127\.0\.0\.1:8788 npx vite build/);
   assert.match(web, /if: hashFiles\('web\/test\/browser\.mjs'\) != ''/);
   assert.match(web, /node test\/browser\.mjs/);
+  assert.match(web, /lsof -t -sTCP:LISTEN -i tcp:8788 -i tcp:5173/);
   assert.doesNotMatch(renderRelease(webOnly).files[".github/workflows/ci-web.yml"], /node test\/browser\.mjs|npm start/);
 });
 
@@ -343,6 +344,7 @@ test("apple-builds builds unsigned for each Apple target only, on a tag or by ha
   const apple = maintained(".github/workflows/apple-builds.yml");
   assert.match(apple, /tags: \["v\*"\]/);
   assert.match(apple, /xcode-version: "27"/);
+  assert.match(apple, /runs-on: xcode-27/);
   assert.match(apple, /-scheme "DemoApp" -destination 'generic\/platform=iOS Simulator'/);
   assert.match(apple, /variant=Mac Catalyst/);
   assert.match(apple, /-scheme "DemoAppTV" -destination 'generic\/platform=tvOS Simulator'/);
@@ -362,6 +364,9 @@ test("aepm-update proposes weekly and applies a merged proposal with the owner k
   assert.match(update, /AEPM_OWNER_KEY: \$\{\{ secrets\.AEPM_OWNER_KEY \}\}/);
   assert.match(update, /aepm_update\.py apply/);
   assert.match(update, /AEPM_FROM: "https:\/\/ourapps\.app"/);
+  assert.match(update, /token: \$\{\{ secrets\.AEPM_PUSH_TOKEN \|\| github\.token \}\}/);
+  assert.match(update, /--answers "\$ANSWERS"/);
+  assert.match(update, /BRANCH: \$\{\{ steps\.update\.outputs\.branch \}\}/);
   assert.ok(maintenance.notes.some((note) => note.includes("AEPM_OWNER_KEY")));
 });
 
@@ -373,7 +378,10 @@ test("rendered workflows pass actionlint when it is installed", () => {
   buildPipeline(directory, all, options);
   writeRelease(directory, renderMaintenance(all, options));
   const workflows = join(directory, ".github/workflows");
-  const lint = spawnSync("actionlint", ["-shellcheck=", "-pyflakes=", ...readdirSync(workflows).map((name) => join(workflows, name))], { encoding: "utf8" });
+  // xcode-27 is a GitHub-hosted image label that actionlint does not list.
+  const config = join(directory, "actionlint.yaml");
+  writeFileSync(config, "self-hosted-runner:\n  labels:\n    - xcode-27\n");
+  const lint = spawnSync("actionlint", ["-config-file", config, "-shellcheck=", "-pyflakes=", ...readdirSync(workflows).map((name) => join(workflows, name))], { encoding: "utf8" });
   assert.equal(lint.status, 0, lint.stdout + lint.stderr);
 });
 

@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   apple:
-    runs-on: @@macRunner@@
+    runs-on: @@appleBuildRunner@@
     timeout-minutes: 60
     defaults:
       run:

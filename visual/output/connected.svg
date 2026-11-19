@@ -23,7 +23,7 @@
 <text xml:space="preserve" text-anchor="start" x="46" y="-406.25" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#edf2fa">Component | Example definition</text>
 <text xml:space="preserve" text-anchor="start" x="79.75" y="-396.25" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#edf2fa">Ourapps release</text>
 <text xml:space="preserve" text-anchor="start" x="55.38" y="-386.25" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#edf2fa">ourapps&#45;ae/ourapps&#45;release</text>
-<text xml:space="preserve" text-anchor="start" x="66.62" y="-376.25" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#edf2fa">Example version 0.7.0</text>
+<text xml:space="preserve" text-anchor="start" x="66.62" y="-376.25" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#edf2fa">Example version 0.8.0</text>
 <text xml:space="preserve" text-anchor="start" x="9" y="-348" font-family="Helvetica,sans-Serif" font-size="12.00" fill="#edf2fa">INPUTS</text>
 <text xml:space="preserve" text-anchor="start" x="163.25" y="-348" font-family="Helvetica,sans-Serif" font-size="12.00" fill="#edf2fa">OUTPUTS</text>
 <polygon fill="#222b3a" stroke="none" points="3,-278 3,-338 65.38,-338 65.38,-278 3,-278"/>
@@ -39,11 +39,11 @@
 <text xml:space="preserve" text-anchor="start" x="9" y="-187" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Storeaddress: https://ourapps.app</text>
 <text xml:space="preserve" text-anchor="start" x="9" y="-162" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Manifesturl: [not set]</text>
 <text xml:space="preserve" text-anchor="start" x="9" y="-137" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Repository: [not set]</text>
-<text xml:space="preserve" text-anchor="start" x="9" y="-112" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Storecredentials: example&#45;storecredentials</text>
+<text xml:space="preserve" text-anchor="start" x="9" y="-112" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Storecredentials: none</text>
 <text xml:space="preserve" text-anchor="start" x="9" y="-87" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Bundleidentifier: [not set]</text>
-<text xml:space="preserve" text-anchor="start" x="9" y="-62" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Androidsigning: example&#45;androidsigning</text>
-<text xml:space="preserve" text-anchor="start" x="9" y="-37" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Webdeploy: example&#45;webdeploy</text>
-<text xml:space="preserve" text-anchor="start" x="9" y="-12" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Hostingaccount: example&#45;hostingaccount</text>
+<text xml:space="preserve" text-anchor="start" x="9" y="-62" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Androidsigning: none</text>
+<text xml:space="preserve" text-anchor="start" x="9" y="-37" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Webdeploy: none</text>
+<text xml:space="preserve" text-anchor="start" x="9" y="-12" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#edf2fa">Hostingaccount: none</text>
 <polygon fill="none" stroke="#ffd166" stroke-width="2" points="1,-1 1,-438.75 229.75,-438.75 229.75,-1 1,-1"/>
 </g>
 <!-- n1 -->

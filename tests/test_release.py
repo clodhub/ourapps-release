@@ -199,6 +199,44 @@ class Read(Base):
         self.assertEqual(Store.seen, [])
 
 
+class Update(unittest.TestCase):
+    """aepm_update.py decisions that need no aepm, store or network."""
+
+    def run_update(self, *args):
+        with tempfile.TemporaryDirectory() as directory:
+            app = Path(directory) / "app"
+            (app / ".aepm").mkdir(parents=True)
+            (app / ".aepm/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"}, "answers": {"video": True}}))
+            output = Path(directory) / "output"
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "propose", "--aepm", directory, "--work", str(Path(directory) / "work"), *args],
+                                    cwd=app, env={**os.environ, "GITHUB_OUTPUT": str(output)}, capture_output=True, text=True)
+            return result, (output.read_text() if output.exists() else ""), (app / ".aepm/update").exists()
+
+    def test_same_version_and_answers_propose_nothing(self):
+        result, output, written = self.run_update("--version", "1.2.0", "--answers", '{"video": true}')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output, "version=\n")
+        self.assertIn("no answer changes", result.stderr)
+        self.assertFalse(written)
+
+    def test_answers_must_be_an_object(self):
+        result, _, written = self.run_update("--version", "1.2.0", "--answers", "[1]")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("JSON object", result.stderr)
+        self.assertFalse(written)
+
+    def test_apply_without_a_proposal_does_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = Path(directory) / "app"
+            (app / ".aepm").mkdir(parents=True)
+            (app / ".aepm/definition.json").write_text("{}")
+            output = Path(directory) / "output"
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "apply", "--aepm", directory, "--work", str(Path(directory) / "work"), "--owner-key", "missing.pem"],
+                                    cwd=app, env={**os.environ, "GITHUB_OUTPUT": str(output)}, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(), "version=\n")
+
+
 class Merge(unittest.TestCase):
     NEW = {"version": "0.6.0", "install": {
         "pwa": "https://new.example/", "android": {"apk": "https://api.github.com/new/apk"},

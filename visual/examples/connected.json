@@ -12,7 +12,7 @@
       "kind": "component",
       "status": "example",
       "package": "ourapps-ae/ourapps-release",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "ports": [
         {
           "id": "release-pipeline",
@@ -137,11 +137,7 @@
       "configuration": {
         "targets": "example",
         "applicationId": "example",
-        "applicationName": "example",
-        "storeCredentials": "example-storecredentials",
-        "androidSigning": "example-androidsigning",
-        "webDeploy": "example-webdeploy",
-        "hostingAccount": "example-hostingaccount"
+        "applicationName": "example"
       }
     },
     {

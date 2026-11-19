@@ -68,6 +68,8 @@ export interface ReleaseOptions {
   // The Xcode major version apple-builds.yml selects (default 27), the generated project (default <appleScheme>.xcodeproj),
   // the iPhone, iPad and Mac scheme (default: the product name without spaces or dashes) and the Apple TV scheme (default <appleScheme>TV).
   xcodeVersion?: string;
+  // The runner apple-builds.yml uses (default xcode-27, GitHub's Xcode 27 image).
+  appleBuildRunner?: string;
   appleProject?: string;
   appleScheme?: string;
   appleTvScheme?: string;
@@ -270,6 +272,8 @@ function render(settings: ReleaseSettings, options: ReleaseOptions): RenderResul
   for (const [name, value] of [["macosMinimum", options.macosMinimum ?? "14.0"], ["tvosMinimum", options.tvosMinimum ?? "17.0"]] as const) if (!VERSION.test(value)) throw new SettingsError(`${name} must be a version number`);
 
   const xcode = options.xcodeVersion ?? "27";
+  const appleBuildRunner = options.appleBuildRunner ?? "xcode-27";
+  if (!RUNNER.test(appleBuildRunner)) throw new SettingsError("appleBuildRunner must be a runner label");
   if (!VERSION.test(xcode)) throw new SettingsError("xcodeVersion must be a version number");
   const appleScheme = options.appleScheme ?? productName.replace(/[ -]/g, "");
   const appleTvScheme = options.appleTvScheme ?? appleScheme + "TV";
@@ -298,7 +302,7 @@ function render(settings: ReleaseSettings, options: ReleaseOptions): RenderResul
     cfToken: `${cloudflare}_API_TOKEN`, cfAccount: `${cloudflare}_ACCOUNT_ID`,
     signingPrefix: prefix, bundleId: resolved.bundleIdentifier ?? "", productName,
     webDir: o.web, androidDir: o.android, desktopDir: o.desktop, appleDir: o.apple, appleHelpers: o.appleHelpers, serverDir: server ?? "", fixturesDir: o.fixtures,
-    node, java, wrangler, macRunner, windowsRunner, xcode, appleProject, appleScheme, appleTvScheme, androidCheckArgs: androidCheck, icon: o.icon, screenshots: o.screenshots, ipadScreenshots: o.ipad, changelog: o.changelog,
+    node, java, wrangler, macRunner, windowsRunner, xcode, appleBuildRunner, appleProject, appleScheme, appleTvScheme, androidCheckArgs: androidCheck, icon: o.icon, screenshots: o.screenshots, ipadScreenshots: o.ipad, changelog: o.changelog,
     needs: ["version", ...built, ...(built.includes("ios") ? ["testflight"] : [])].join(", "),
     anyOn: built.map((target) => `needs.version.outputs.${target} == 'true'`).join(" || ") || "false",
     webUrlExpression: has("web") ? "${{ needs.web.outputs.url }}" : "",

@@ -4,7 +4,8 @@
   python3 components/ourapps-release/server/scripts/aepm_update.py propose --aepm AEPM --work WORK
       Designs the newest recipe version with the answers and substitutions in .aepm/definition.json, proposes the update
       (aepm runs the packages' checks on the staged tree) and writes .aepm/update/definition.json and summary.md for review.
-      Writes nothing when the recipe is already at its newest version.
+      --answers JSON (an object) changes recorded answers for the proposal, so a design change can be proposed at the
+      installed version. Writes nothing when the version and the answers are both unchanged.
   python3 components/ourapps-release/server/scripts/aepm_update.py apply --aepm AEPM --work WORK --owner-key KEY
       Proposes .aepm/update/definition.json again, approves it with the owner's private key and applies it, then removes
       .aepm/update/.
@@ -14,6 +15,7 @@ policy trusts Level N's release and guardian keys (https://ourapps.app/policy/le
 a key made for the run), and the exact packages of the design for running their checks. Needs Python 3.12, Node and git.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -95,13 +97,14 @@ def restore(root, work, owner):
     return store
 
 
-def design(root, work, store, definition, version):
-    """The definition of the recipe at version with the current answers and substitutions."""
-    write(work / "answers.json", definition.get("answers") or {})
+def design(root, work, store, definition, version, answers):
+    """The definition of the recipe at version with the given answers and the current substitutions."""
+    write(work / "answers.json", answers)
     recipe = definition["recipe"]["name"]
     substitutes = [f"{slot}={selection['component']}@{selection['version']}"
                    for slot, selection in sorted((definition.get("selections") or {}).items()) if selection.get("reason") == "substituted"]
-    aepm(["fetch", f"{recipe}@{version}", "--with-dependencies", "--store", str(store), "--from", STORE_ADDRESS], root)
+    if version != definition["recipe"]["version"]:
+        aepm(["fetch", f"{recipe}@{version}", "--with-dependencies", "--store", str(store), "--from", STORE_ADDRESS], root)
     command = ["design", f"{recipe}@{version}", "--store", str(store), "--answers", str(work / "answers.json"), "--out", str(work / "next.json")]
     for substitute in substitutes:
         command += ["--substitute", substitute]
@@ -134,19 +137,27 @@ def command_propose(arguments, root, work):
     current = read(RECORDS / "definition.json")
     name, installed = current["recipe"]["name"], current["recipe"]["version"]
     version = arguments.version or newest(name)
-    if version == installed:
+    recorded = current.get("answers") or {}
+    changes = json.loads(arguments.answers) if arguments.answers else {}
+    if not isinstance(changes, dict):
+        sys.exit("--answers must be a JSON object")
+    answers = {**recorded, **changes}
+    changed = sorted(key for key in answers if recorded.get(key) != answers[key])
+    if version == installed and not changed:
         output("version", "")
-        print(f"{name} {installed} is the newest version", file=sys.stderr)
+        print(f"{name} {installed} is the newest version and no answer changes", file=sys.stderr)
         return
     # Nothing is approved here, so a key made for this run stands in for the owner's.
     owner = [{"publicKey": disposable_key()}]
     store = restore(root, work, owner)
-    next_definition = design(root, work, store, current, version)
+    next_definition = design(root, work, store, current, version, answers)
     _, lock = propose(root, work, store, next_definition, owner)
     before = {entry["name"]: entry["version"] for entry in read(RECORDS / "lock.json")["packages"]}
     after = {entry["name"]: entry["version"] for entry in read(lock)["packages"]}
-    lines = [f"# {name} {installed} to {version}", "", "aepm staged the update and ran the packages' checks on it.", "",
-             "| Package | Installed | Proposed |", "|---|---|---|"]
+    lines = [f"# {name} {installed} to {version}", "", "aepm staged the update and ran the packages' checks on it.", ""]
+    if changed:
+        lines += ["Answers changed: " + ", ".join(f"`{key}` {json.dumps(recorded.get(key))} to {json.dumps(answers[key])}" for key in changed), ""]
+    lines += ["| Package | Installed | Proposed |", "|---|---|---|"]
     for package in sorted(set(before) | set(after)):
         if before.get(package) != after.get(package):
             lines.append(f"| {package} | {before.get(package, '-')} | {after.get(package, '-')} |")
@@ -155,11 +166,15 @@ def command_propose(arguments, root, work):
     shutil.copyfile(next_definition, UPDATE / "definition.json")
     (UPDATE / "summary.md").write_text("\n".join(lines) + "\n")
     output("version", version)
+    suffix = "-" + hashlib.sha256(json.dumps({key: answers[key] for key in changed}, sort_keys=True).encode()).hexdigest()[:8] if changed else ""
+    output("branch", f"aepm-update/{version}{suffix}")
 
 
 def command_apply(arguments, root, work):
     if not (UPDATE / "definition.json").is_file():
-        sys.exit("no .aepm/update/definition.json to apply")
+        output("version", "")
+        print("no .aepm/update/definition.json: nothing to apply", file=sys.stderr)
+        return
     owner = [{"publicKey": public_key(arguments.owner_key)}]
     next_definition = work / "next.json"
     shutil.copyfile(UPDATE / "definition.json", next_definition)
@@ -178,6 +193,7 @@ def main():
     parser.add_argument("--aepm", required=True, type=Path)
     parser.add_argument("--work", required=True, type=Path)
     parser.add_argument("--version", help="the recipe version to propose (default: the newest published)")
+    parser.add_argument("--answers", help="a JSON object of answer changes to propose (propose)")
     parser.add_argument("--owner-key", type=Path, help="the owner's private key (apply)")
     arguments = parser.parse_args()
     if not (RECORDS / "definition.json").is_file():
