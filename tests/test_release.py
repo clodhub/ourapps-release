@@ -225,6 +225,17 @@ class Update(unittest.TestCase):
         self.assertIn("JSON object", result.stderr)
         self.assertFalse(written)
 
+    def test_an_automatic_channel_needs_the_owner_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = Path(directory) / "app"
+            (app / ".aepm").mkdir(parents=True)
+            (app / ".aepm/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"},
+                                                                   "updatePolicy": {"security": "auto", "features": "manual", "preview": "hold"}}))
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "run", "--aepm", directory, "--work", str(Path(directory) / "work")],
+                                    cwd=app, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("security updates without a person: set the AEPM_OWNER_KEY secret", result.stderr)
+
     def test_apply_without_a_proposal_does_nothing(self):
         with tempfile.TemporaryDirectory() as directory:
             app = Path(directory) / "app"

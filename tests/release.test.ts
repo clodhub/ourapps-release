@@ -358,7 +358,9 @@ test("apple-builds builds unsigned for each Apple target only, on a tag or by ha
 test("aepm-update proposes weekly and applies a merged proposal with the owner key secret", () => {
   const update = maintained(".github/workflows/aepm-update.yml");
   assert.match(update, /cron: "17 5 \* \* 1"/);
-  assert.match(update, /aepm_update\.py propose/);
+  assert.match(update, /"\$script" propose/);
+  assert.match(update, /"\$script" run/);
+  assert.match(update, /Apply the \$APPLIED updates/);
   assert.match(update, /gh pr create/);
   assert.match(update, /paths: \["\.aepm\/update\/definition\.json"\]/);
   assert.match(update, /AEPM_OWNER_KEY: \$\{\{ secrets\.AEPM_OWNER_KEY \}\}/);

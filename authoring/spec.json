@@ -1,6 +1,6 @@
 {
   "name": "ourapps-release",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "title": "Ourapps release",
   "description": "Builds, signs and publishes each enabled client target to ourapps.app: GitHub Actions workflow templates, build scripts and tested Python scripts for target switches, manifest generation, package verification and release publishing.",
   "facilities": [
@@ -147,13 +147,17 @@
     {
       "reference": {
         "name": "ourapps-ae/ourapps-release-class",
-        "version": "1.0.0",
-        "digest": "c5bc452af536763f3c5d168981dfeedb886b1d06380fd286eaa6039c58d8e0f0"
+        "version": "1.1.0",
+        "digest": "9898cce2ad89a9c41945bdb0af401f577d14d0e2c65a50e351acf5f6afecdbe4"
       },
       "descriptor": {
-        "format": 1,
+        "format": 2,
         "name": "ourapps-ae/ourapps-release-class",
-        "version": "1.0.0",
+        "version": "1.1.0",
+        "title": "Release pipeline",
+        "summary": "GitHub workflows that check, build, release and update the application",
+        "category": "delivery/releases",
+        "presentation": "none",
         "provides": [
           {
             "type": "ae/release-pipeline",
@@ -263,8 +267,8 @@
   "implements": [
     {
       "name": "ourapps-ae/ourapps-release-class",
-      "version": "1.0.0",
-      "digest": "c5bc452af536763f3c5d168981dfeedb886b1d06380fd286eaa6039c58d8e0f0"
+      "version": "1.1.0",
+      "digest": "9898cce2ad89a9c41945bdb0af401f577d14d0e2c65a50e351acf5f6afecdbe4"
     }
   ],
   "upstream": [],
@@ -330,5 +334,11 @@
         "manual": "Without the package manager, install Node 26 from nodejs.org (the installer, or the zip or tar archive with its folder put first on PATH); on Linux also from the NodeSource repository."
       }
     ]
-  }
+  },
+  "release": {
+    "channel": "features",
+    "fixes": []
+  },
+  "images": [],
+  "vulnerabilityWaivers": []
 }
