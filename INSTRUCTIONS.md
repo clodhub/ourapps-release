@@ -1,9 +1,9 @@
 # Ourapps release instructions
 
 ## For the agent
-Select `ourapps-ae/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.
+Select `clodhub/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.
 
-- Select package `ourapps-ae/ourapps-release` version `0.10.0`.
+- Select package `clodhub/ourapps-release` version `0.11.0`.
 - Settings to configure:
   - `targets` (string, label; required)
   - `applicationId` (string, slug; required)
@@ -26,4 +26,4 @@ Create the repository secrets named by the references (`<NAME>_APP_ID` and `<NAM
 From the component directory:
 
 - `node --test tests/release.test.ts` (release, required-local; tools: node 26.5, python3 3.12)
-- `python3 -m aepm review <digest> --store STORE --policy POLICY --trusted --allow-network` checks an archive fetched with `python3 -m aepm fetch ourapps-ae/ourapps-release@VERSION --store STORE --from https://ourapps.app` and runs its suites.
+- `python3 -m aepm review <digest> --store STORE --policy POLICY --trusted --allow-network` checks an archive fetched with `python3 -m aepm fetch clodhub/ourapps-release@VERSION --store STORE --from https://clodhub.com` and runs its suites.

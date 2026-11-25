@@ -365,7 +365,7 @@ test("aepm-update proposes weekly and applies a merged proposal with the owner k
   assert.match(update, /paths: \["\.aepm\/update\/definition\.json"\]/);
   assert.match(update, /AEPM_OWNER_KEY: \$\{\{ secrets\.AEPM_OWNER_KEY \}\}/);
   assert.match(update, /aepm_update\.py apply/);
-  assert.match(update, /AEPM_FROM: "https:\/\/ourapps\.app"/);
+  assert.match(update, /AEPM_FROM: "https:\/\/clodhub\.com"/);
   assert.match(update, /token: \$\{\{ secrets\.AEPM_PUSH_TOKEN \|\| github\.token \}\}/);
   assert.match(update, /--answers "\$ANSWERS"/);
   assert.match(update, /BRANCH: \$\{\{ steps\.update\.outputs\.branch \}\}/);

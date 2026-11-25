@@ -16,7 +16,7 @@
       .aepm/update/.
 
 AEPM is an aepm checkout; WORK an empty folder outside the repository for the package store, policy and proposal. The
-policy trusts Level N's release and guardian keys (https://ourapps.app/policy/levelnpolicy.json), the owner key (for propose,
+policy trusts Level N's release and guardian keys (https://clodhub.com/policy/levelnpolicy.json), the owner key (for propose,
 a key made for the run), and the exact packages of the design for running their checks. Needs Python 3.12, Node and git.
 """
 import argparse
@@ -29,7 +29,7 @@ import subprocess
 import sys
 from urllib.request import Request, urlopen
 
-STORE_ADDRESS = os.environ.get("AEPM_FROM", "https://ourapps.app")
+CATALOGUE = os.environ.get("AEPM_FROM", "https://clodhub.com")
 # The application folder by its path: apply replaces the folder, so the working directory itself is not followed.
 APP = Path(os.getcwd())
 RECORDS = APP / ".aepm"
@@ -37,8 +37,8 @@ UPDATE = RECORDS / "update"
 
 
 def get(path):
-    # The store refuses requests without a client name.
-    with urlopen(Request(STORE_ADDRESS + path, headers={"User-Agent": "aepm-update"}), timeout=60) as response:
+    # The catalogue refuses Python's default client name.
+    with urlopen(Request(CATALOGUE + path, headers={"User-Agent": "aepm-update"}), timeout=60) as response:
         return json.loads(response.read())
 
 
@@ -82,10 +82,10 @@ def policy(work, owner, lock):
 def fetch(root, store, definition):
     """The recipe the definition names with every component it names, and each substituted component."""
     recipe = definition["recipe"]
-    aepm(["fetch", f"{recipe['name']}@{recipe['version']}", "--with-dependencies", "--store", str(store), "--from", STORE_ADDRESS], root)
+    aepm(["fetch", f"{recipe['name']}@{recipe['version']}", "--with-dependencies", "--store", str(store), "--from", CATALOGUE], root)
     for selection in (definition.get("selections") or {}).values():
         if selection.get("reason") == "substituted":
-            aepm(["fetch", f"{selection['component']}@{selection['version']}", "--store", str(store), "--from", STORE_ADDRESS], root)
+            aepm(["fetch", f"{selection['component']}@{selection['version']}", "--store", str(store), "--from", CATALOGUE], root)
 
 
 def restore(root, work, owner):
@@ -109,7 +109,7 @@ def design(root, work, store, definition, version, answers):
     substitutes = [f"{slot}={selection['component']}@{selection['version']}"
                    for slot, selection in sorted((definition.get("selections") or {}).items()) if selection.get("reason") == "substituted"]
     if version != definition["recipe"]["version"]:
-        aepm(["fetch", f"{recipe}@{version}", "--with-dependencies", "--store", str(store), "--from", STORE_ADDRESS], root)
+        aepm(["fetch", f"{recipe}@{version}", "--with-dependencies", "--store", str(store), "--from", CATALOGUE], root)
     command = ["design", f"{recipe}@{version}", "--store", str(store), "--answers", str(work / "answers.json"), "--out", str(work / "next.json")]
     for substitute in substitutes:
         command += ["--substitute", substitute]
@@ -131,7 +131,7 @@ def next_for_channel(root, work, store, channel):
     target = work / f"next-{channel}.json"
     script = ("import json, sys; from pathlib import Path; from aepm.model import AepmError; from aepm.channels import next_definition\n"
               "try:\n"
-              f" value = next_definition(Path({str(APP)!r}), {channel!r}, Path({str(store)!r}), {STORE_ADDRESS!r})\n"
+              f" value = next_definition(Path({str(APP)!r}), {channel!r}, Path({str(store)!r}), {CATALOGUE!r})\n"
               "except AepmError as error:\n"
               " print(json.dumps({'error': error.code})); sys.exit(0)\n"
               f"Path({str(target)!r}).write_text(json.dumps(value)); print(json.dumps({{'ok': True}}))")

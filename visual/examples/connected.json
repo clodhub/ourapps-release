@@ -7,12 +7,12 @@
   "focus": "component",
   "definitions": [
     {
-      "id": "ourapps-ae.ourapps-release",
+      "id": "clodhub.ourapps-release",
       "name": "Ourapps release",
       "kind": "component",
       "status": "example",
-      "package": "ourapps-ae/ourapps-release",
-      "version": "0.10.0",
+      "package": "clodhub/ourapps-release",
+      "version": "0.11.0",
       "ports": [
         {
           "id": "release-pipeline",
@@ -133,7 +133,7 @@
     {
       "id": "component",
       "name": "Ourapps release",
-      "definition": "ourapps-ae.ourapps-release",
+      "definition": "clodhub.ourapps-release",
       "configuration": {
         "targets": "example",
         "applicationId": "example",

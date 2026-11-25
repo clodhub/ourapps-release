@@ -1,6 +1,6 @@
 {
   "name": "ourapps-release",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "title": "Ourapps release",
   "description": "Builds, signs and publishes each enabled client target to ourapps.app: GitHub Actions workflow templates, build scripts and tested Python scripts for target switches, manifest generation, package verification and release publishing.",
   "facilities": [
@@ -104,8 +104,8 @@
   ],
   "dependencies": [],
   "tools": {
-    "node": "26.5.0",
-    "python3": "3.12.8"
+    "node": "26.5",
+    "python3": "3.12"
   },
   "platforms": [
     "server"
@@ -120,8 +120,8 @@
       ],
       "timeoutSeconds": 240,
       "tools": {
-        "node": "26.5.0",
-        "python3": "3.12.8"
+        "node": "26.5",
+        "python3": "3.12"
       }
     }
   ],
@@ -141,18 +141,18 @@
     "scenarios": "A web-only application renders a release workflow with only the version, web and publish jobs; adding Android adds its signing secrets and job. An application with no store account leaves `storeCredentials` unset: the release builds Android and web from the pipeline targets and publishes to GitHub, and iPhone, Mac and Apple TV signed uploads are not rendered (unsigned Mac and Apple TV evidence is). A store owner switches Android off: the next release keeps the last APK entry in the manifest. Everything is switched off during a run: the draft release is deleted and nothing is published. A verified Windows package is uploaded and listed only when its target is switched on.",
     "updates": "Patch updates replace the owned files; render the pipeline again after each update and review the diff, because the workflows are generated files. No application data is held; the manifest of the previous release is read from GitHub at publish time. Removal deletes the owned sources; the rendered workflows and scripts in the application repository remain until the owner deletes them."
   },
-  "agentInstructions": "Select `ourapps-ae/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.",
+  "agentInstructions": "Select `clodhub/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.",
   "developerInstructions": "Create the repository secrets named by the references (`<NAME>_APP_ID` and `<NAME>_BUILD_TOKEN` from the store, only when `storeCredentials` is set; for Android a keystore as base64 plus its password, alias and key password; for Cloudflare web hosting an API token and account id, on an account separate from the store's). Provide `CHANGELOG.md` with a section for each released version, the icon and screenshots, and the Apple and desktop build scripts named in `result.notes`. Run the render step, commit the generated files, then push a `v*` tag. To check, run the commands below.",
   "classes": [
     {
       "reference": {
-        "name": "ourapps-ae/ourapps-release-class",
+        "name": "clodhub/ourapps-release-class",
         "version": "1.1.0",
-        "digest": "9898cce2ad89a9c41945bdb0af401f577d14d0e2c65a50e351acf5f6afecdbe4"
+        "digest": "f741c0230503caa1ba5ad7016621ee47dd43624dbf20904cf0ac0f5eb32152a1"
       },
       "descriptor": {
         "format": 2,
-        "name": "ourapps-ae/ourapps-release-class",
+        "name": "clodhub/ourapps-release-class",
         "version": "1.1.0",
         "title": "Release pipeline",
         "summary": "GitHub workflows that check, build, release and update the application",
@@ -230,7 +230,7 @@
           },
           {
             "path": "classes/ourapps-release-class/release-pipeline.json",
-            "digest": "c1aefaecf1b213261d9c8a7726c6133dd35d515d2481d6615aab907cfc361763"
+            "digest": "cea4c10b6aa6867a0ca550b7e0e3edba8edd7a06c544065925046760818fc4f1"
           },
           {
             "path": "classes/ourapps-release-class/runtime.mjs",
@@ -266,9 +266,9 @@
   ],
   "implements": [
     {
-      "name": "ourapps-ae/ourapps-release-class",
+      "name": "clodhub/ourapps-release-class",
       "version": "1.1.0",
-      "digest": "9898cce2ad89a9c41945bdb0af401f577d14d0e2c65a50e351acf5f6afecdbe4"
+      "digest": "f741c0230503caa1ba5ad7016621ee47dd43624dbf20904cf0ac0f5eb32152a1"
     }
   ],
   "upstream": [],
@@ -288,10 +288,10 @@
     "owners": [
       "Level N Ltd"
     ],
-    "contact": "https://github.com/ourapps-ae/ourapps-release/issues",
-    "repository": "https://github.com/ourapps-ae/ourapps-release",
+    "contact": "https://github.com/clodhub/ourapps-release/issues",
+    "repository": "https://github.com/clodhub/ourapps-release",
     "updates": {
-      "source": "https://github.com/ourapps-ae/ourapps-release/releases",
+      "source": "https://github.com/clodhub/ourapps-release/releases",
       "strategy": "manual"
     }
   },

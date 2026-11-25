@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AEPM_FROM: "@@storeApi@@"
+  AEPM_FROM: "https://clodhub.com"
 
 jobs:
   propose:
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "@@node@@"
-      - run: git clone --depth 1 https://github.com/ourapps-ae/aepm "$RUNNER_TEMP/aepm"
+      - run: git clone --depth 1 https://github.com/clodhub/aepm "$RUNNER_TEMP/aepm"
       - name: Write the owner key
         env:
           AEPM_OWNER_KEY: ${{ secrets.AEPM_OWNER_KEY }}
@@ -125,7 +125,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "@@node@@"
-      - run: git clone --depth 1 https://github.com/ourapps-ae/aepm "$RUNNER_TEMP/aepm"
+      - run: git clone --depth 1 https://github.com/clodhub/aepm "$RUNNER_TEMP/aepm"
       - name: Write the owner key
         env:
           AEPM_OWNER_KEY: ${{ secrets.AEPM_OWNER_KEY }}
