@@ -1,6 +1,7 @@
 {
   "name": "ourapps-release",
-  "version": "0.11.0",
+  "version": "0.12.0",
+  "sourceRevision": "19905b75dbea89fbfd424d67fe26c81aaed0e018",
   "title": "Ourapps release",
   "description": "Builds, signs and publishes each enabled client target to ourapps.app: GitHub Actions workflow templates, build scripts and tested Python scripts for target switches, manifest generation, package verification and release publishing.",
   "facilities": [
@@ -12,7 +13,7 @@
   "provides": [
     {
       "id": "release-pipeline",
-      "type": "ae/release-pipeline",
+      "type": "com.clodhub/release-pipeline",
       "version": "1.0.0",
       "path": "interfaces/release-pipeline.json"
     }
@@ -135,24 +136,24 @@
   "text": {
     "purpose": "The release side of an application. It renders GitHub Actions workflows and build scripts for the enabled client targets (web, Android, iPhone and iPad, Mac, Apple TV, Windows) and ships the scripts those workflows run: the store's per-target switches read fail-closed and merged into the manifest (a switched-off target keeps the previous release's entry), the application manifest (`my-app.json`, schema 1) built and validated, verified direct Mac and Windows packages checked against their metadata, Apple archive and export checks, Windows installer evidence, and the publisher that creates a draft GitHub Release, uploads every asset and makes the manifest the last upload before the draft goes public.",
     "userInputs": "The installer collects `targets` (any of `ios`, `android`, `web`, `macos`, `windows`, `tvos`, separated by spaces), `applicationId`, `applicationName`, `bundleIdentifier` (required for Apple targets), `storeAddress` (the store's address, default `https://ourapps.app`), `repository` (the application's repository, `https://github.com/<owner>/<name>`) and `manifestUrl` (where the store reads `my-app.json`: the repository's latest release, `https://api.github.com/repos/<owner>/<name>/releases/latest`). Four settings are reference names, never values (letters, digits and hyphens; default `none`, which is unset): `storeCredentials` (repository secrets `<NAME>_APP_ID` and `<NAME>_BUILD_TOKEN`; without them the pipeline makes no store call: every target the pipeline builds is on, there is no iPhone build, TestFlight upload or Apple TestFlight run, and the release still publishes to GitHub with `STORE_MODE: \"none\"`), `androidSigning` (`<NAME>_KEYSTORE_BASE64`, `_KEYSTORE_PASSWORD`, `_KEY_ALIAS`, `_KEY_PASSWORD`), `webDeploy` (Cloudflare hosting for the web build: `<NAME>_API_TOKEN`, `<NAME>_ACCOUNT_ID`) and `hostingAccount` (the Cloudflare account the server deploys to: `<NAME>_API_TOKEN`, `<NAME>_ACCOUNT_ID`). A reference such as `demo-android-signing` names the secrets `DEMO_ANDROID_SIGNING_...`; the repository's secret store holds the values. They are plain settings because a template cannot render a secret setting.",
-    "integration": "At build time call `renderRelease(settings, options)` from `server/render.ts` and write the result with `writeRelease` into the application repository: `.github/workflows/*.yml`, `scripts/*` and `release/app.json`. The shipped Python scripts install under `components/ourapps-release/server/scripts/` and are what the workflows call. `options` names the application's directories (web, android, desktop, Apple), the Node and Java versions, runners, the icon, screenshots, changelog, extra manifest fields (for example `minPlayers`) and the signing prefix, which must equal the Android and Apple hosts' prefix. `result.notes` lists what the rendered files expect the repository to provide. The web build comes from web-host, the Android project from android-host, the Apple project from apple-host, the Windows package from windows-desktop and the server check from server-host; this component names them only through directories and environment variable prefixes. `examples/consumer.ts` renders a pipeline without a game. At install aepm renders `components/ourapps-release/server/release.json` from the settings (application id and name, targets, store address and the four reference names); in the application's release workflow `release_plan.py` reads it and gives the version, the targets to build and the repository secret name of each reference. aepm places only the recipe's own files outside `components/<name>/`, so a recipe that installs workflows at the application root ships them itself and has them call these scripts; `renderRelease` writes a set from the templates at build time instead.",
+    "integration": "At build time call `renderRelease(settings, options)` from `server/render.ts` and write the result with `writeRelease` into the application repository: `.github/workflows/*.yml`, `scripts/*` and `release/app.json`. The shipped Python scripts install under `components/ourapps-release/server/scripts/` and are what the workflows call. `options` names the application's directories (web, android, desktop, Apple), the Node and Java versions, runners, the icon, screenshots, changelog, extra manifest fields (for example `minPlayers`) and the signing prefix, which must equal the Android and Apple hosts' prefix. `result.notes` lists what the rendered files expect the repository to provide. The web build comes from web-host, the Android project from android-host, the Apple project from apple-host, the Windows package from windows-desktop and the server check from server-host; this component names them only through directories and environment variable prefixes. `examples/consumer.ts` renders a pipeline without a game. At install clod renders `components/ourapps-release/server/release.json` from the settings (application id and name, targets, store address and the four reference names); in the application's release workflow `release_plan.py` reads it and gives the version, the targets to build and the repository secret name of each reference. clod places only the recipe's own files outside `components/<name>/`, so a recipe that installs workflows at the application root ships them itself and has them call these scripts; `renderRelease` writes a set from the templates at build time instead.",
     "infrastructure": "Everything runs in the application's GitHub Actions on the runners named in the options (Ubuntu for web, Android, publishing; macOS for iOS, Mac and Apple TV; Windows for the Windows installer). When store credentials are set, the store at `storeAddress` is read for target switches and signing, and receives TestFlight uploads; it reads `my-app.json` from the GitHub Release. Without them the store is never called. GitHub Actions minutes, macOS runner minutes and store terms were not checked and no cost is stated.",
     "verification": "`node --test tests/release.test.ts` renders every target combination and checks the workflows (jobs, needs, guard order, secrets only as names, options refused when unsafe), parses them as YAML when PyYAML is installed, runs `bash -n` on the scripts, builds a manifest from the rendered application description, and runs `tests/test_release.py`: the store's switches against a local stand-in server (including refused redirects and malformed answers), manifest merging, manifest building and validation, verified package checks, Apple export and archive checks with stand-in `xcrun` and `codesign`, Windows installer evidence from a synthetic executable header, and the publisher end to end with a stand-in `gh` (switched-off targets, switches changing during the run, first release, draft removal, upload order). Without store credentials the suite renders the whole target set and checks that no file names a store secret, address, route or TestFlight step, that the workflows parse and have the expected jobs, and runs the target reader and publisher with `STORE_MODE=none` against the stand-in server, which must see no request. Real GitHub Actions runs, a real store, `gh`, signing, notarization, TestFlight and the Apple, Windows and Android builds were not exercised, and `installer-certificate` (needs `openssl`) is untested.",
     "scenarios": "A web-only application renders a release workflow with only the version, web and publish jobs; adding Android adds its signing secrets and job. An application with no store account leaves `storeCredentials` unset: the release builds Android and web from the pipeline targets and publishes to GitHub, and iPhone, Mac and Apple TV signed uploads are not rendered (unsigned Mac and Apple TV evidence is). A store owner switches Android off: the next release keeps the last APK entry in the manifest. Everything is switched off during a run: the draft release is deleted and nothing is published. A verified Windows package is uploaded and listed only when its target is switched on.",
     "updates": "Patch updates replace the owned files; render the pipeline again after each update and review the diff, because the workflows are generated files. No application data is held; the manifest of the previous release is read from GitHub at publish time. Removal deletes the owned sources; the rendered workflows and scripts in the application repository remain until the owner deletes them."
   },
-  "agentInstructions": "Select `clodhub/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.",
+  "agentInstructions": "Select `pkg:clod/com.clodhub/ourapps-release` for every recipe that has a client target; set `targets` from the targets answer (map the recipe's `ios` to `ios`, `macos` to `macos`, and so on). Set `storeCredentials` only when the developer has a store account (the recipe's updates question supplies it); leave it `none` otherwise and the pipeline skips every store step. Give each reference setting as a reference name (for example `<application>-store`), never a value, and tell the developer which repository secrets that creates. Set `repository` to `https://github.com/<owner>/<name>` and `manifestUrl` to `https://api.github.com/repos/<owner>/<name>/releases/latest` when the repository is known. Use the same signing prefix as android-host and apple-host.",
   "developerInstructions": "Create the repository secrets named by the references (`<NAME>_APP_ID` and `<NAME>_BUILD_TOKEN` from the store, only when `storeCredentials` is set; for Android a keystore as base64 plus its password, alias and key password; for Cloudflare web hosting an API token and account id, on an account separate from the store's). Provide `CHANGELOG.md` with a section for each released version, the icon and screenshots, and the Apple and desktop build scripts named in `result.notes`. Run the render step, commit the generated files, then push a `v*` tag. To check, run the commands below.",
   "classes": [
     {
       "reference": {
-        "name": "clodhub/ourapps-release-class",
+        "name": "pkg:clod/com.clodhub/ourapps-release-class",
         "version": "1.1.0",
-        "digest": "f741c0230503caa1ba5ad7016621ee47dd43624dbf20904cf0ac0f5eb32152a1"
+        "digest": "4f1cdf249f27ce0b5abc17fa53ae49cad2413e4208c68c81b877c97ecdddc621"
       },
       "descriptor": {
-        "format": 2,
-        "name": "clodhub/ourapps-release-class",
+        "format": 3,
+        "name": "pkg:clod/com.clodhub/ourapps-release-class",
         "version": "1.1.0",
         "title": "Release pipeline",
         "summary": "GitHub workflows that check, build, release and update the application",
@@ -160,7 +161,7 @@
         "presentation": "none",
         "provides": [
           {
-            "type": "ae/release-pipeline",
+            "type": "com.clodhub/release-pipeline",
             "version": "1.0.0",
             "path": "classes/ourapps-release-class/release-pipeline.json",
             "modules": {
@@ -230,11 +231,11 @@
           },
           {
             "path": "classes/ourapps-release-class/release-pipeline.json",
-            "digest": "cea4c10b6aa6867a0ca550b7e0e3edba8edd7a06c544065925046760818fc4f1"
+            "digest": "e8b6accd3c76687d9a9ff738d77ad71c92cdd055e3716fe1669a07b98aa94ae0"
           },
           {
             "path": "classes/ourapps-release-class/runtime.mjs",
-            "digest": "7440f3891614c423f74668cb5a2445fea58bbfa4d7c740c8e8a855d1d9300d43"
+            "digest": "1d85f0dae92d5c6c859cd48a4211a933718ae3e168554a2b00806183c4b661f0"
           }
         ],
         "verification": [
@@ -266,9 +267,9 @@
   ],
   "implements": [
     {
-      "name": "clodhub/ourapps-release-class",
+      "name": "pkg:clod/com.clodhub/ourapps-release-class",
       "version": "1.1.0",
-      "digest": "f741c0230503caa1ba5ad7016621ee47dd43624dbf20904cf0ac0f5eb32152a1"
+      "digest": "4f1cdf249f27ce0b5abc17fa53ae49cad2413e4208c68c81b877c97ecdddc621"
     }
   ],
   "upstream": [],

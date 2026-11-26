@@ -200,17 +200,17 @@ class Read(Base):
 
 
 class Update(unittest.TestCase):
-    """aepm_update.py decisions that need no aepm, store or network."""
+    """clod_update.py decisions that need no clod, store or network."""
 
     def run_update(self, *args):
         with tempfile.TemporaryDirectory() as directory:
             app = Path(directory) / "app"
-            (app / ".aepm").mkdir(parents=True)
-            (app / ".aepm/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"}, "answers": {"video": True}}))
+            (app / ".clod").mkdir(parents=True)
+            (app / ".clod/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"}, "answers": {"video": True}}))
             output = Path(directory) / "output"
-            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "propose", "--aepm", directory, "--work", str(Path(directory) / "work"), *args],
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "clod_update.py"), "propose", "--clod", directory, "--work", str(Path(directory) / "work"), *args],
                                     cwd=app, env={**os.environ, "GITHUB_OUTPUT": str(output)}, capture_output=True, text=True)
-            return result, (output.read_text() if output.exists() else ""), (app / ".aepm/update").exists()
+            return result, (output.read_text() if output.exists() else ""), (app / ".clod/update").exists()
 
     def test_same_version_and_answers_propose_nothing(self):
         result, output, written = self.run_update("--version", "1.2.0", "--answers", '{"video": true}')
@@ -228,21 +228,21 @@ class Update(unittest.TestCase):
     def test_an_automatic_channel_needs_the_owner_key(self):
         with tempfile.TemporaryDirectory() as directory:
             app = Path(directory) / "app"
-            (app / ".aepm").mkdir(parents=True)
-            (app / ".aepm/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"},
+            (app / ".clod").mkdir(parents=True)
+            (app / ".clod/definition.json").write_text(json.dumps({"recipe": {"name": "acme/demo", "version": "1.2.0"},
                                                                    "updatePolicy": {"security": "auto", "features": "manual", "preview": "hold"}}))
-            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "run", "--aepm", directory, "--work", str(Path(directory) / "work")],
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "clod_update.py"), "run", "--clod", directory, "--work", str(Path(directory) / "work")],
                                     cwd=app, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("security updates without a person: set the AEPM_OWNER_KEY secret", result.stderr)
+            self.assertIn("security updates without a person: set the CLOD_OWNER_KEY secret", result.stderr)
 
     def test_apply_without_a_proposal_does_nothing(self):
         with tempfile.TemporaryDirectory() as directory:
             app = Path(directory) / "app"
-            (app / ".aepm").mkdir(parents=True)
-            (app / ".aepm/definition.json").write_text("{}")
+            (app / ".clod").mkdir(parents=True)
+            (app / ".clod/definition.json").write_text("{}")
             output = Path(directory) / "output"
-            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "aepm_update.py"), "apply", "--aepm", directory, "--work", str(Path(directory) / "work"), "--owner-key", "missing.pem"],
+            result = subprocess.run([sys.executable, "-B", str(SCRIPTS / "clod_update.py"), "apply", "--clod", directory, "--work", str(Path(directory) / "work"), "--owner-key", "missing.pem"],
                                     cwd=app, env={**os.environ, "GITHUB_OUTPUT": str(output)}, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(output.read_text(), "version=\n")

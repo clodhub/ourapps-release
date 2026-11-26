@@ -7,19 +7,19 @@
   "focus": "component",
   "definitions": [
     {
-      "id": "clodhub.ourapps-release",
+      "id": "com.clodhub.ourapps-release",
       "name": "Ourapps release",
       "kind": "component",
       "status": "example",
-      "package": "clodhub/ourapps-release",
-      "version": "0.11.0",
+      "package": "pkg:clod/com.clodhub/ourapps-release",
+      "version": "0.12.0",
       "ports": [
         {
           "id": "release-pipeline",
           "name": "Release pipeline",
           "direction": "output",
           "kind": "interface",
-          "type": "ae/release-pipeline",
+          "type": "com.clodhub/release-pipeline",
           "version": "1.0.0"
         }
       ],
@@ -120,7 +120,7 @@
           "name": "Release pipeline",
           "direction": "input",
           "kind": "interface",
-          "type": "ae/release-pipeline",
+          "type": "com.clodhub/release-pipeline",
           "version": "1.0.0",
           "required": true,
           "cardinality": "one"
@@ -133,7 +133,7 @@
     {
       "id": "component",
       "name": "Ourapps release",
-      "definition": "clodhub.ourapps-release",
+      "definition": "com.clodhub.ourapps-release",
       "configuration": {
         "targets": "example",
         "applicationId": "example",

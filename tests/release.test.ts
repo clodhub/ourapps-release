@@ -308,14 +308,14 @@ const maintained = (path: string) => maintenance.files[path];
 
 test("every check workflow can be started by hand", () => {
   for (const name of ["ci-web", "ci-android", "ci-server"]) assert.match(text(`.github/workflows/${name}.yml`), /^  workflow_dispatch:/m, name);
-  for (const name of ["apple-builds", "aepm-update"]) assert.match(maintained(`.github/workflows/${name}.yml`), /^  workflow_dispatch:/m, name);
+  for (const name of ["apple-builds", "clod-update"]) assert.match(maintained(`.github/workflows/${name}.yml`), /^  workflow_dispatch:/m, name);
 });
 
 test("the maintenance workflows are rendered apart from the release pipeline's files", () => {
-  assert.deepEqual(Object.keys(maintenance.files).sort(), [".github/workflows/aepm-update.yml", ".github/workflows/apple-builds.yml"]);
-  assert.deepEqual(Object.keys(renderMaintenance(webOnly).files), [".github/workflows/aepm-update.yml"]);
-  assert.ok(!Object.keys(rendered.files).some((file) => file.endsWith("apple-builds.yml") || file.endsWith("aepm-update.yml")));
-  assert.ok(!rendered.notes.some((note) => note.includes("AEPM_OWNER_KEY")));
+  assert.deepEqual(Object.keys(maintenance.files).sort(), [".github/workflows/apple-builds.yml", ".github/workflows/clod-update.yml"]);
+  assert.deepEqual(Object.keys(renderMaintenance(webOnly).files), [".github/workflows/clod-update.yml"]);
+  assert.ok(!Object.keys(rendered.files).some((file) => file.endsWith("apple-builds.yml") || file.endsWith("clod-update.yml")));
+  assert.ok(!rendered.notes.some((note) => note.includes("CLOD_OWNER_KEY")));
 });
 
 test("with a server folder ci-web plays the application's browser check against the server started on the runner", () => {
@@ -355,21 +355,21 @@ test("apple-builds builds unsigned for each Apple target only, on a tag or by ha
   assert.throws(() => renderMaintenance(all, { appleScheme: "a b" }), /scheme/);
 });
 
-test("aepm-update proposes weekly and applies a merged proposal with the owner key secret", () => {
-  const update = maintained(".github/workflows/aepm-update.yml");
+test("clod-update proposes weekly and applies a merged proposal with the owner key secret", () => {
+  const update = maintained(".github/workflows/clod-update.yml");
   assert.match(update, /cron: "17 5 \* \* 1"/);
   assert.match(update, /"\$script" propose/);
   assert.match(update, /"\$script" run/);
   assert.match(update, /Apply the \$APPLIED updates/);
   assert.match(update, /gh pr create/);
-  assert.match(update, /paths: \["\.aepm\/update\/definition\.json"\]/);
-  assert.match(update, /AEPM_OWNER_KEY: \$\{\{ secrets\.AEPM_OWNER_KEY \}\}/);
-  assert.match(update, /aepm_update\.py apply/);
-  assert.match(update, /AEPM_FROM: "https:\/\/clodhub\.com"/);
-  assert.match(update, /token: \$\{\{ secrets\.AEPM_PUSH_TOKEN \|\| github\.token \}\}/);
+  assert.match(update, /paths: \["\.clod\/update\/definition\.json"\]/);
+  assert.match(update, /CLOD_OWNER_KEY: \$\{\{ secrets\.CLOD_OWNER_KEY \}\}/);
+  assert.match(update, /clod_update\.py apply/);
+  assert.match(update, /CLOD_FROM: "https:\/\/clodhub\.com"/);
+  assert.match(update, /token: \$\{\{ secrets\.CLOD_PUSH_TOKEN \|\| github\.token \}\}/);
   assert.match(update, /--answers "\$ANSWERS"/);
   assert.match(update, /BRANCH: \$\{\{ steps\.update\.outputs\.branch \}\}/);
-  assert.ok(maintenance.notes.some((note) => note.includes("AEPM_OWNER_KEY")));
+  assert.ok(maintenance.notes.some((note) => note.includes("CLOD_OWNER_KEY")));
 });
 
 test("rendered workflows pass actionlint when it is installed", () => {

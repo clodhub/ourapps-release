@@ -225,19 +225,19 @@ export interface RenderResult {
 }
 
 // The maintenance workflows, outside the release pipeline's files: apple-builds.yml (unsigned Apple builds per Apple target)
-// and aepm-update.yml (weekly update proposals, applied on merge with the owner key).
-const MAINTENANCE = [".github/workflows/apple-builds.yml", ".github/workflows/aepm-update.yml"];
+// and clod-update.yml (weekly update proposals, applied on merge with the owner key).
+const MAINTENANCE = [".github/workflows/apple-builds.yml", ".github/workflows/clod-update.yml"];
 
 export function renderRelease(settings: ReleaseSettings, options: ReleaseOptions = {}): RenderResult {
   const result = render(settings, options);
   for (const file of MAINTENANCE) delete result.files[file];
-  return { ...result, notes: result.notes.filter((note) => !note.startsWith("aepm-update.yml")) };
+  return { ...result, notes: result.notes.filter((note) => !note.startsWith("clod-update.yml")) };
 }
 
 export function renderMaintenance(settings: ReleaseSettings, options: ReleaseOptions = {}): RenderResult {
   const result = render(settings, options);
   const files = Object.fromEntries(MAINTENANCE.filter((file) => file in result.files).map((file) => [file, result.files[file]]));
-  return { files, executable: [], notes: result.notes.filter((note) => note.startsWith("aepm-update.yml")) };
+  return { files, executable: [], notes: result.notes.filter((note) => note.startsWith("clod-update.yml")) };
 }
 
 function render(settings: ReleaseSettings, options: ReleaseOptions): RenderResult {
@@ -334,8 +334,8 @@ function render(settings: ReleaseSettings, options: ReleaseOptions): RenderResul
   if (server) write("workflows/ci-server.yml", ".github/workflows/ci-server.yml");
   if (desktopPlatforms.length) write("workflows/platform-packages.yml", ".github/workflows/platform-packages.yml");
   if (appleFlags.size) write("workflows/apple-builds.yml", ".github/workflows/apple-builds.yml", appleFlags);
-  write("workflows/aepm-update.yml", ".github/workflows/aepm-update.yml");
-  notes.push(`aepm-update.yml applies a merged update with the owner's private key from the AEPM_OWNER_KEY repository secret, and opens pull requests only when the repository lets GitHub Actions create them.`);
+  write("workflows/clod-update.yml", ".github/workflows/clod-update.yml");
+  notes.push(`clod-update.yml applies a merged update with the owner's private key from the CLOD_OWNER_KEY repository secret, and opens pull requests only when the repository lets GitHub Actions create them.`);
   if (apple && !stored) notes.push("apple-testflight.yml and build-apple-testflight.sh are not rendered: the TestFlight export reserves builds, signs and uploads through the store, which has no credentials here. platform-packages.yml still builds unsigned Mac and Apple TV evidence.");
   if (has("ios") && !stored) notes.push("No iOS job is rendered: the iPhone build is signed and uploaded to TestFlight through the store, which has no credentials here.");
   if (apple && stored) {

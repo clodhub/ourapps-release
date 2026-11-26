@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What one run of the release workflow builds, from the settings aepm rendered into release.json at install.
+"""What one run of the release workflow builds, from the settings clod rendered into release.json at install.
 
   release_plan.py <release.json> [<target>=<path> ...]
 
